@@ -20,10 +20,17 @@ from agents.tool_based_generative_ui import create_tool_based_generative_ui_adap
 
 app = FastAPI(title="Claude Agent SDK Server")
 
+# Allowed CORS origins come from CORS_ALLOW_ORIGINS (comma-separated) and default
+# to the "*" wildcard for local development. Credentials are only enabled for
+# explicit, non-wildcard origins — a wildcard can never be combined with
+# allow_credentials=True (any site could then read authenticated responses).
+_origins = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if o.strip()]
+cors_origins = _origins or ["*"]
+is_wildcard = "*" in cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=bool(_origins) and not is_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,7 +57,7 @@ def main():
         print("Error: ANTHROPIC_API_KEY required")
         return 1
 
-    port = int(os.getenv("PORT", "8888"))
+    port = int(os.getenv("PORT", "8019"))
     print(f"Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 
